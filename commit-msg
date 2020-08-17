@@ -1,0 +1,38 @@
+#!/bin/bash
+FILE_CONTENT="$(cat "$1")"
+while IFS=$'\n' read -r line; do LINES+=("$line"); done < <(printf '%s\n' "$FILE_CONTENT")
+SUBJECT=${LINES[0]}
+PARENT_PATH=$( cd "$(dirname "${BASH_SOURCE[0]}")" || exit ; pwd -P )
+# Initialize constants here
+SUBJECT_REGEX='^[A-Z][A-z| ]{5,49}$'
+SUBJECT_ERROR_MSG="* A good subject should not exceeds 50 characters and starts with a capital letter"
+SUBJECT_STARTING_WHITELIST_REGEX="$(while read -r line; do printf "%s" "|^$line"; done < "$PARENT_PATH"/SUBJECT_STARTING_WHITELIST.txt )"
+SUBJECT_STARTING_WHITELIST_REGEX=${SUBJECT_STARTING_WHITELIST_REGEX:1}
+SUBJECT_STARTING_WHITELIST_ERROR_MSG="* A good subject should start with a whitelisted word"
+BODY_LINE_REGEX="^.{0,71}$"
+BODY_LINE_ERROR_MSG="* A good body should wrap at character 71"
+EXIT_CODE=0
+
+if [[ ! $SUBJECT =~ $SUBJECT_REGEX ]]; then
+	echo "$SUBJECT_ERROR_MSG"
+	EXIT_CODE=1
+fi
+if [[ ! $SUBJECT =~ $SUBJECT_STARTING_WHITELIST_REGEX ]]; then
+	echo "$SUBJECT_STARTING_WHITELIST_ERROR_MSG"
+	EXIT_CODE=1
+fi
+if [[ ! "${LINES[1]}" == "" ]]; then
+	echo "* A good commit should have an empty new line after the subject"
+	EXIT_CODE=1
+fi
+
+for line in "${LINES[@]}"
+do
+  if [[ ! $line =~ $BODY_LINE_REGEX ]]; then
+    	echo "$BODY_LINE_ERROR_MSG"
+	    EXIT_CODE=1
+	    break
+  fi
+done
+
+exit $EXIT_CODE
